@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CCTP_Main</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="camera-scene">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas" style="display:none;"></canvas>
+        </div>
+
+        <div class="control-bar">
+            <div class="spacer"></div> <button id="snap" class="capture-btn">
+                <span class="icon">📸</span>
+            </button>
+
+            <button id="auto-btn" class="auto-btn">Auto</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
