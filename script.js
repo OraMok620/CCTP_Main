@@ -52,23 +52,41 @@ snap.addEventListener('click', () => {
     link.click();
 });
 
-// NOTES 5: Set auto-exposure mode on button click (Button functionality to set the camera's exposure mode to auto (continuous) if supported).
+// NOTES 5: Set auto-exposure on button click (Button functionality to set the camera's exposure mode to 'continuous', which is typically the auto-exposure mode. It checks for support and applies the constraint if possible.)
 autoBtn.addEventListener('click', async () => {
-    if (!videoTrack) return;
+    if (!videoTrack) {
+        console.error("Camera track not found.");
+        return;
+    }
+    // 1. Get current capabilities and settings
     const capabilities = videoTrack.getCapabilities();
+    const settings = videoTrack.getSettings();
+    // 2. Check if the device actually supports auto-exposure
     if (!capabilities.exposureMode || !capabilities.exposureMode.includes('continuous')) {
-        alert("Auto-exposure mode is not supported on this device.");
+        console.warn("This device does not support continuous (auto) exposure.");
         return;
     }
     try {
+        // 3. Apply the 'continuous' constraint
         await videoTrack.applyConstraints({
             advanced: [{ exposureMode: 'continuous' }]
         });
-        console.log("Exposure set to Auto (Continuous)");
-        console.log("New Settings:", videoTrack.getSettings());
-    } catch (e) {
-        console.error("Failed to set exposure mode:", e);
+        console.log("✅ Exposure set to AUTO (continuous)");
+        // 4. Log the new settings to the console so you can verify the change
+        const newSettings = videoTrack.getSettings();
+        console.log("New Camera Settings:", newSettings);
+    } catch (err) {
+        console.error("Error applying auto exposure:", err);
     }
 });
+
+
+setInterval(() => {
+    if (videoTrack) {
+        const settings = videoTrack.getSettings();
+        // exposureTime is usually in milliseconds or fractional seconds
+        console.log("Live Exposure Time:", settings.exposureTime);
+    }
+}, 1000);
 
 initCamera();
