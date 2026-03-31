@@ -1,92 +1,85 @@
-// NOTES 1: Get references to HTML elements
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const snap = document.getElementById('snap');
 const autoBtn = document.getElementById('auto-btn');
 let videoTrack;
 
-// NOTES 2: Initialize camera stream
 async function initCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" }, // facingMode: "environment" for rear camera on mobile devices, "user" for front camera.
+            video: { facingMode: "environment" }, 
             audio: false 
         });
         video.srcObject = stream;
         videoTrack = stream.getVideoTracks()[0];
-        setTimeout(logExposureInfo, 1000);
     } catch (err) {
-        console.error("Error accessing camera: ", err);
-        alert("Could not access camera. Please ensure you are using HTTPS and have granted permissions.");
+        console.error("Camera access error:", err);
     }
 }
 
-//NOTES 3: Function to log camera capabilities and current settings, including exposure information if available.
-function logExposureInfo() {
+autoBtn.addEventListener('click', async () => {
     if (!videoTrack) return;
 
     const capabilities = videoTrack.getCapabilities();
     const settings = videoTrack.getSettings();
 
-    console.log("--- Camera Capabilities ---", capabilities);
-    console.log("--- Current Settings ---", settings);
-
-    if (settings.exposureMode) {
-        console.log("Current Exposure Mode:", settings.exposureMode);
-        console.log("Current Exposure Compensation:", settings.exposureCompensation);
-    } else {
-        console.log("Exposure control is not supported on this browser/device.");
+    if (!capabilities.exposureCompensation) {
+        console.warn("Exposure compensation not supported.");
+        return;
     }
-}
 
-// NOTES 4: Capture photo on button click (Button functionality to capture the current frame from the video stream and save it as an image)
+    // 1. Quick Brightness Analysis
+    const tempCanvas = document.createElement('canvas');
+    const ctx = tempCanvas.getContext('2d');
+    tempCanvas.width = 40; // Extremely small for speed
+    tempCanvas.height = 30;
+    ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+    const data = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+
+    let totalBrightness = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        totalBrightness += (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+    }
+    const avgBrightness = totalBrightness / (data.length / 4);
+
+    // 2. Calculate New Target
+    let currentComp = settings.exposureCompensation || 0;
+    const step = capabilities.exposureCompensation.step || 0.5;
+    let targetComp = currentComp;
+
+    if (avgBrightness > 190) { 
+        targetComp -= (step * 2); // Decrease brightness
+    } else if (avgBrightness < 70) { 
+        targetComp += (step * 2); // Increase brightness
+    }
+
+    // 3. Clamp to hardware limits
+    targetComp = Math.max(capabilities.exposureCompensation.min, 
+                 Math.min(capabilities.exposureCompensation.max, targetComp));
+
+    // 4. Apply
+    try {
+        await videoTrack.applyConstraints({
+            advanced: [
+                { exposureMode: 'manual' }, 
+                { exposureCompensation: targetComp }
+            ]
+        });
+        console.log(`Brightness: ${Math.round(avgBrightness)} | New Compensation: ${targetComp}`);
+    } catch (err) {
+        console.error("Failed to adjust hardware:", err);
+    }
+});
+
 snap.addEventListener('click', () => {
     const context = canvas.getContext('2d');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataURL = canvas.toDataURL('image/png');
     const link = document.createElement('a');
-    link.download = 'captured-photo.png';
-    link.href = dataURL;
+    link.download = 'photo.png';
+    link.href = canvas.toDataURL('image/png');
     link.click();
 });
-
-// NOTES 5: Set auto-exposure on button click (Button functionality to set the camera's exposure mode to 'continuous', which is typically the auto-exposure mode. It checks for support and applies the constraint if possible.)
-autoBtn.addEventListener('click', async () => {
-    if (!videoTrack) {
-        console.error("Camera track not found.");
-        return;
-    }
-    // 1. Get current capabilities and settings
-    const capabilities = videoTrack.getCapabilities();
-    const settings = videoTrack.getSettings();
-    // 2. Check if the device actually supports auto-exposure
-    if (!capabilities.exposureMode || !capabilities.exposureMode.includes('continuous')) {
-        console.warn("This device does not support continuous (auto) exposure.");
-        return;
-    }
-    try {
-        // 3. Apply the 'continuous' constraint
-        await videoTrack.applyConstraints({
-            advanced: [{ exposureMode: 'continuous' }]
-        });
-        console.log("✅ Exposure set to AUTO (continuous)");
-        // 4. Log the new settings to the console so you can verify the change
-        const newSettings = videoTrack.getSettings();
-        console.log("New Camera Settings:", newSettings);
-    } catch (err) {
-        console.error("Error applying auto exposure:", err);
-    }
-});
-
-
-setInterval(() => {
-    if (videoTrack) {
-        const settings = videoTrack.getSettings();
-        // exposureTime is usually in milliseconds or fractional seconds
-        console.log("Live Exposure Time:", settings.exposureTime);
-    }
-}, 1000);
 
 initCamera();
