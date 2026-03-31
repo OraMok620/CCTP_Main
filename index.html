@@ -7,22 +7,20 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <div class="app-container">
+        // Camera view and canvas for capturing photos
         <div class="camera-scene">
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas" style="display:none;"></canvas>
         </div>
-
+        // Control bar with needed buttons
         <div class="control-bar">
             <div class="spacer"></div> <button id="snap" class="capture-btn">
                 <span class="icon">📸</span>
             </button>
-
             <button id="auto-btn" class="auto-btn">Auto</button>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
