@@ -1,49 +1,65 @@
+//Notes 1: document.getElementByID is used to access HTML elements by their ID, allowing us to manipulate them in JavaScript.
 const video = document.getElementById('video');
 const snapBtn = document.getElementById('snapBtn');
 const resetBtn = document.getElementById('resetBtn');
 const status = document.getElementById('status');
 const previews = document.getElementById('previews');
 const hiddenCanvas = document.getElementById('hiddenCanvas');
+
+//Notes 2: capturedMats is an array that will hold the OpenCV Mat objects representing the captured images. 
+//Notes 3:MAX_WIDTH is a constant that limits the width of the captured images to optimize performance and memory usage.
 let capturedMats = [];
 const MAX_WIDTH = 1024;
 
+//Notes 4: The window.onload function checks for the availability of OpenCV.js and initializes the application once it's ready.
 window.onload = () => {
+    //Notes 5: The setInterval function is used to periodically check if the OpenCV library has loaded and is ready to use.
     let checkCV = setInterval(() => {
         if (typeof cv !== 'undefined' && cv.Mat) {
             clearInterval(checkCV);
             onOpenCvReady();
         }
-    }, 500);
+    }, 500);//500 milliseconds is a reasonable interval to check for the library's readiness without causing excessive CPU usage.
 };
 
+//Notes 6: The onOpenCvReady function is called once OpenCV.js is loaded. 
+// It updates the status message, enables the snap button, and starts the camera.
 function onOpenCvReady() {
+    //Notes 7: The status message informs the user that OpenCV is ready and provides further instructions.
     status.innerText = "OpenCV Ready. Tap video to focus, then take photo.";
     snapBtn.disabled = false;
-    snapBtn.innerText = "📸 1. Take Object Photo";
+    snapBtn.innerText = "📸 1. Take Photo of Object";
     startCamera();
 }
 
+//Notes 8: The startCamera function uses the MediaDevices API to access the user's camera and stream it to the video element.
 async function startCamera() {
     try {
+        //Notes 9: The getUserMedia function is called with constraints to access the camera and disable audio.
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' }, 
+            video: { facingMode: 'environment' }, //Notes 10: There are 2 options for facingMode: 'user' for front camera and 'environment' for rear camera.
             audio: false 
         });
         video.srcObject = stream;
     } catch (err) {
-        status.innerText = "Error: Camera access denied.";
+        status.innerText = "Error: Camera access denied."; //Notes 11: If the user denies camera access or if there's an error, the catch block updates the status message to inform the user. Showing a user-friendly error message helps improve the user experience and guides them on how to proceed. (ethical consideration)
     }
 }
 
-// --- Exposure Compensation ---
+//Notes 12: The exposureCompensate function adjusts the exposure of the second image to match the first image if there's a significant difference in brightness.
 function exposureCompensate(img1, img2) {
-    let gray1 = new cv.Mat(), gray2 = new cv.Mat();
-    cv.cvtColor(img1, gray1, cv.COLOR_RGBA2GRAY);
+    //Notes 13: We create two new Mat objects, gray1 and gray2, to hold the grayscale versions of the input images. Converting to grayscale simplifies the process of calculating the average brightness (mean) of each image.
+    let gray1 = new cv.Mat(), gray2 = new cv.Mat(); 
+    //Notes 14: The cvtColor function is used to convert the input images from RGBA color space to grayscale. This is necessary because we want to analyze the brightness of the images, and working with grayscale simplifies this process.
+    cv.cvtColor(img1, gray1, cv.COLOR_RGBA2GRAY); 
     cv.cvtColor(img2, gray2, cv.COLOR_RGBA2GRAY);
     
+    //Notes 15: The mean function calculates the average pixel intensity of the grayscale images. We take the first element of the returned array (mean[0]) because it contains the average brightness value for the single channel in the grayscale image.
     let mean1 = cv.mean(gray1)[0];
     let mean2 = cv.mean(gray2)[0];
     
+    //Notes 16: We check if both mean values are greater than 0 (to avoid division by zero) and if the absolute difference between the two means is greater than 10. 
+    // If these conditions are met, it indicates a significant exposure difference between the two images.
     if (mean1 > 0 && mean2 > 0 && Math.abs(mean1 - mean2) > 10) {
         let ratio = mean1 / mean2;
         let adjusted = new cv.Mat();
@@ -53,6 +69,7 @@ function exposureCompensate(img1, img2) {
         return adjusted;
     }
     
+    //Notes 17: If the exposure difference is not significant, we simply clean up the grayscale Mat objects and return a clone of the second image without any adjustments.
     gray1.delete();
     gray2.delete();
     return img2.clone();
