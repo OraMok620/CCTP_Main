@@ -6,11 +6,11 @@ const status = document.getElementById('status');
 const previews = document.getElementById('previews');
 const hiddenCanvas = document.getElementById('hiddenCanvas');
 
-// Notes 2: capturedMats holds the OpenCV Mat objects for the captured images. 
+// Notes 2: capturedMats holds the OpenCV Mat objects for the captured images.
 let capturedMats = [];
 const MAX_WIDTH = 1024;
 
-// Notes 3: Initialize application when OpenCV is ready.
+// Notes 3: Wait for OpenCV.js to load before initializing the app.
 window.onload = () => {
     let checkCV = setInterval(() => {
         if (typeof cv !== 'undefined' && cv.Mat) {
@@ -20,6 +20,7 @@ window.onload = () => {
     }, 500);
 };
 
+// Notes 4: onOpenCvReady initializes the app once OpenCV is ready, enabling the snap button and starting the camera.
 function onOpenCvReady() {
     status.innerText = "OpenCV Ready. Take your two photos.";
     snapBtn.disabled = false;
@@ -27,15 +28,16 @@ function onOpenCvReady() {
     startCamera();
 }
 
+// Notes 5: startCamera uses the MediaDevices API to access the user's camera, requesting the environment-facing camera for better quality.
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' }, 
-            audio: false 
+            video: { facingMode: 'environment' }, //Additional hint: There are 2 facing modes: 'user' (front) and 'environment' (back / rear). 
+            audio: false  // We don't need audio for this app.
         });
         video.srcObject = stream;
     } catch (err) {
-        status.innerText = "Error: Camera access denied.";
+        status.innerText = "Error: Camera access denied."; // Message shown if user denies camera access or if there's an error.
     }
 }
 
