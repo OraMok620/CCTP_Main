@@ -1,26 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CCTP_Main</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTP</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        // Camera view and canvas for capturing photos
-        <div class="camera-scene">
-            <video id="video" autoplay playsinline></video>
-            <canvas id="canvas" style="display:none;"></canvas>
-        </div>
-        // Control bar with needed buttons
-        <div class="control-bar">
-            <div class="spacer"></div> <button id="snap" class="capture-btn">
-                <span class="icon">📸</span>
-            </button>
-            <button id="auto-btn" class="auto-btn">Auto</button>
-        </div>
+
+    <h2>CCTP</h2>
+    <div id="status">Loading...</div>
+    
+    <video id="video" autoplay playsinline></video>
+    
+    <div class="controls">
+        <button id="snapBtn" disabled>please wait...</button>
+        <button id="resetBtn">Reset</button>
     </div>
+
+    <div class="preview-group" id="previews"></div>
+
+    <canvas id="hiddenCanvas" style="display:none;"></canvas>
+
+    <script async src="https://docs.opencv.org/4.5.5/opencv.js" type="text/javascript"></script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -1,85 +1,129 @@
 const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const snap = document.getElementById('snap');
-const autoBtn = document.getElementById('auto-btn');
-let videoTrack;
+const snapBtn = document.getElementById('snapBtn');
+const resetBtn = document.getElementById('resetBtn');
+const status = document.getElementById('status');
+const previews = document.getElementById('previews');
+const hiddenCanvas = document.getElementById('hiddenCanvas');
 
-async function initCamera() {
+let capturedMats = [];
+const MAX_WIDTH = 1024; 
+
+//Check if OpenCV.js is loaded
+window.onload = () => {
+    let checkCV = setInterval(() => {
+        if (typeof cv !== 'undefined' && cv.Mat) {
+            clearInterval(checkCV);
+            onOpenCvReady();
+        }
+    }, 500);
+};
+
+function onOpenCvReady() {
+    status.innerText = "Please point the camera at the 'object' to take a photo.";
+    snapBtn.disabled = false;
+    snapBtn.innerText = "📸 First Photo for your object";
+    startCamera();
+}
+
+async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" }, 
+            video: { facingMode: 'environment' }, 
             audio: false 
         });
         video.srcObject = stream;
-        videoTrack = stream.getVideoTracks()[0];
     } catch (err) {
-        console.error("Camera access error:", err);
+        status.innerText = "Error: Unable to access the camera";
     }
 }
 
-autoBtn.addEventListener('click', async () => {
-    if (!videoTrack) return;
+snapBtn.onclick = () => {
+    const ctx = hiddenCanvas.getContext('2d');
+    let scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+    hiddenCanvas.width = video.videoWidth * scale;
+    hiddenCanvas.height = video.videoHeight * scale;
+    
+    ctx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+    
+    let mat = cv.imread(hiddenCanvas);
+    capturedMats.push(mat);
 
-    const capabilities = videoTrack.getCapabilities();
-    const settings = videoTrack.getSettings();
+    let thumb = document.createElement('canvas');
+    thumb.className = 'thumb';
+    cv.imshow(thumb, mat);
+    previews.appendChild(thumb);
 
-    if (!capabilities.exposureCompensation) {
-        console.warn("Exposure compensation not supported.");
-        return;
+    if (capturedMats.length === 1) {
+        status.innerText = "First photo taken! Now please point the camera at the 'background' to take a photo.";
+        snapBtn.innerText = "📸 Second Photo for the background";
+    } else if (capturedMats.length === 2) {
+        snapBtn.disabled = true;
+        snapBtn.innerText = "Processing...";
+        resetBtn.style.display = "inline-block";
+        setTimeout(processStacking, 100);
     }
+};
 
-    // 1. Quick Brightness Analysis
-    const tempCanvas = document.createElement('canvas');
-    const ctx = tempCanvas.getContext('2d');
-    tempCanvas.width = 40; // Extremely small for speed
-    tempCanvas.height = 30;
-    ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-    const data = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
-
-    let totalBrightness = 0;
-    for (let i = 0; i < data.length; i += 4) {
-        totalBrightness += (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-    }
-    const avgBrightness = totalBrightness / (data.length / 4);
-
-    // 2. Calculate New Target
-    let currentComp = settings.exposureCompensation || 0;
-    const step = capabilities.exposureCompensation.step || 0.5;
-    let targetComp = currentComp;
-
-    if (avgBrightness > 190) { 
-        targetComp -= (step * 2); // Decrease brightness
-    } else if (avgBrightness < 70) { 
-        targetComp += (step * 2); // Increase brightness
-    }
-
-    // 3. Clamp to hardware limits
-    targetComp = Math.max(capabilities.exposureCompensation.min, 
-                 Math.min(capabilities.exposureCompensation.max, targetComp));
-
-    // 4. Apply
+function processStacking() {
     try {
-        await videoTrack.applyConstraints({
-            advanced: [
-                { exposureMode: 'manual' }, 
-                { exposureCompensation: targetComp }
-            ]
-        });
-        console.log(`Brightness: ${Math.round(avgBrightness)} | New Compensation: ${targetComp}`);
+        status.innerText = "Processing... This may take a few seconds.";
+        
+        let img1 = capturedMats[0]; 
+        let img2 = capturedMats[1]; 
+
+        let gray1 = new cv.Mat();
+        let gray2 = new cv.Mat();
+        cv.cvtColor(img1, gray1, cv.COLOR_RGBA2GRAY);
+        cv.cvtColor(img2, gray2, cv.COLOR_RGBA2GRAY);
+
+        let blur1 = new cv.Mat();
+        let blur2 = new cv.Mat();
+        cv.GaussianBlur(gray1, blur1, new cv.Size(5, 5), 0);
+        cv.GaussianBlur(gray2, blur2, new cv.Size(5, 5), 0);
+
+        let lap1 = new cv.Mat();
+        let lap2 = new cv.Mat();
+        cv.Laplacian(blur1, lap1, cv.CV_64F);
+        cv.Laplacian(blur2, lap2, cv.CV_64F);
+
+        let abs1 = new cv.Mat();
+        let abs2 = new cv.Mat();
+        cv.convertScaleAbs(lap1, abs1);
+        cv.convertScaleAbs(lap2, abs2);
+
+        let mask = new cv.Mat();
+        cv.compare(abs1, abs2, mask, cv.CMP_GT);
+
+        let result = img2.clone(); 
+        img1.copyTo(result, mask); 
+
+        let resCanvas = document.getElementById('resCanvas');
+        if(!resCanvas) {
+            resCanvas = document.createElement('canvas');
+            resCanvas.id = 'resCanvas';
+            document.body.appendChild(resCanvas);
+        }
+        cv.imshow(resCanvas, result);
+        
+        status.innerText = "🎉 Processing successful!";
+
+        // 釋放記憶體
+        [gray1, gray2, blur1, blur2, lap1, lap2, abs1, abs2, mask, result].forEach(m => m.delete());
+        
     } catch (err) {
-        console.error("Failed to adjust hardware:", err);
+        console.error(err);
+        status.innerText = "Processing failed: " + err;
     }
-});
+}
 
-snap.addEventListener('click', () => {
-    const context = canvas.getContext('2d');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const link = document.createElement('a');
-    link.download = 'photo.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-});
-
-initCamera();
+resetBtn.onclick = () => {
+    capturedMats.forEach(m => m.delete());
+    capturedMats = [];
+    previews.innerHTML = "";
+    const oldRes = document.getElementById('resCanvas');
+    if(oldRes) oldRes.remove();
+    snapBtn.disabled = false;
+    snapBtn.innerText = "📸 First Photo for your object";
+    status.innerText = "Please point the camera at the 'object' to take a photo.";
+    resetBtn.style.display = "none";
+};
