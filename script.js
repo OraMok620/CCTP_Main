@@ -104,10 +104,20 @@ function processStacking() {
             document.body.appendChild(resCanvas);
         }
         cv.imshow(resCanvas, result);
+        const downloadBtn = document.getElementById('downloadBtn');
+        downloadBtn.style.display = "inline-block";
+
+        downloadBtn.onclick = () => {
+            const resCanvas = document.getElementById('resCanvas');
+            const link = document.createElement('a');
+            link.download = 'stacked-photo.jpg';
+            // Convert canvas to a data URL (the actual image data)
+            link.href = resCanvas.toDataURL('image/jpeg', 0.9); 
+            link.click();
+        };
         
         status.innerText = "🎉 Processing successful!";
 
-        // 釋放記憶體
         [gray1, gray2, blur1, blur2, lap1, lap2, abs1, abs2, mask, result].forEach(m => m.delete());
         
     } catch (err) {
