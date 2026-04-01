@@ -370,7 +370,7 @@ function processStacking() {
         if (img2_raw.channels() !== 4) cv.cvtColor(img2_raw, img2_raw, cv.COLOR_RGB2RGBA);
 
         // --- STEP 2: ALIGNMENT ---
-        let img2 = alignImages(img1, img2_raw);
+        let img2 = robustAlignment(img1, img2_raw);
         matsToObjectDelete.push(img2);
 
         // DOUBLE CHECK: If alignImages returned a different size, resize it back
