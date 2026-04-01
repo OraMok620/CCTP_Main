@@ -113,20 +113,26 @@ function setupDownload(canvas) {
 video.onclick = async (e) => {
     const track = video.srcObject.getVideoTracks()[0];
     const capabilities = track.getCapabilities();
+    
     const rect = video.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
-    if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-        try {
-            await track.applyConstraints({
-                advanced: [{ pointsOfInterest: [{x, y}] }]
-            });
-            status.innerText = `Focusing at ${Math.round(x*100)}, ${Math.round(y*100)}...`;
-            if (navigator.vibrate) navigator.vibrate(50);
-        } catch (err) {
-            console.warn("Focus constraints not supported", err);
-        }
+    // Check if the phone supports manual focus or single-shot autofocus
+    const focusMode = capabilities.focusMode?.includes('manual') ? 'manual' : 
+                     capabilities.focusMode?.includes('single-shot') ? 'single-shot' : 'continuous';
+
+    try {
+        await track.applyConstraints({
+            advanced: [{
+                focusMode: focusMode, // Try to lock the focus
+                pointsOfInterest: [{x, y}]
+            }]
+        });
+        status.innerText = `Focus Locked at ${Math.round(x*100)}%`;
+        if (navigator.vibrate) navigator.vibrate(50);
+    } catch (err) {
+        console.warn("Focus lock failed:", err);
     }
 };
 
