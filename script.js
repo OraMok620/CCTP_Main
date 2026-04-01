@@ -25,7 +25,7 @@ window.onload = () => {
 //Notes 6: The onOpenCvReady function is called once OpenCV.js is loaded. 
 // It updates the status message, enables the snap button, and starts the camera.
 function onOpenCvReady() {
-    //Notes 7: The status message informs the user that OpenCV is ready and provides further instructions.
+    //Notes 7: The status message provides further instructions.
     status.innerText = "Tap screen to focus.";
     snapBtn.disabled = false;
     snapBtn.innerText = "Take photo for Object focused";
