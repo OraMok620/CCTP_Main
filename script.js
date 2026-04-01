@@ -356,119 +356,130 @@ function refineMask(mask, img) {
 
 // --- Main Processing with Memory Management ---
 function processStacking() {
-    let mats = []; // Track all Mats for cleanup
+    let matsToObjectDelete = []; // Track everything for memory safety
     
     try {
-        status.innerText = "Checking alignment...";
-        
-        if (capturedMats.length < 2) {
-            throw new Error("Need two images");
-        }
+        status.innerText = "⏳ Hardening images and aligning...";
         
         let img1 = capturedMats[0];
         let img2_raw = capturedMats[1];
-        
-        // Motion detection
-        status.innerText = "Checking for camera movement...";
-        if (!detectMotion(img1, img2_raw)) {
-            status.innerText = "⚠️ Camera moved too much. Please take a new background photo.";
-            snapBtn.disabled = false;
-            snapBtn.innerText = "Retake background";
-            return;
+
+        // --- STEP 1: SIZE & TYPE SANITIZATION ---
+        // Ensure both are RGBA (4 channels)
+        if (img1.channels() !== 4) cv.cvtColor(img1, img1, cv.COLOR_RGB2RGBA);
+        if (img2_raw.channels() !== 4) cv.cvtColor(img2_raw, img2_raw, cv.COLOR_RGB2RGBA);
+
+        // --- STEP 2: ALIGNMENT ---
+        let img2 = alignImages(img1, img2_raw);
+        matsToObjectDelete.push(img2);
+
+        // DOUBLE CHECK: If alignImages returned a different size, resize it back
+        if (img2.rows !== img1.rows || img2.cols !== img1.cols) {
+            let fixedImg2 = new cv.Mat();
+            cv.resize(img2, fixedImg2, new cv.Size(img1.cols, img1.rows));
+            img2.delete();
+            img2 = fixedImg2;
+            matsToObjectDelete.push(img2);
         }
-        
-        // Alignment
-        status.innerText = "Aligning images...";
-        let img2 = robustAlignment(img1, img2_raw);
-        mats.push(img2);
-        
-        // Exposure compensation
-        status.innerText = "Adjusting exposure...";
-        let img2Compensated = exposureCompensate(img1, img2);
-        if (img2Compensated !== img2) {
-            mats.push(img2Compensated);
-            img2 = img2Compensated;
-        }
-        
-        // Generate mask using Laplacian focus detection
-        status.innerText = "Analyzing focus regions...";
+
+        // --- STEP 3: SHARPNESS DETECTION ---
         let gray1 = new cv.Mat(), gray2 = new cv.Mat();
-        mats.push(gray1, gray2);
         cv.cvtColor(img1, gray1, cv.COLOR_RGBA2GRAY);
         cv.cvtColor(img2, gray2, cv.COLOR_RGBA2GRAY);
-        
-        let smoothGray1 = new cv.Mat(), smoothGray2 = new cv.Mat();
-        mats.push(smoothGray1, smoothGray2);
-        cv.GaussianBlur(gray1, smoothGray1, new cv.Size(5, 5), 0);
-        cv.GaussianBlur(gray2, smoothGray2, new cv.Size(5, 5), 0);
-        
+        matsToObjectDelete.push(gray1, gray2);
+
         let lap1 = new cv.Mat(), lap2 = new cv.Mat();
-        mats.push(lap1, lap2);
-        cv.Laplacian(smoothGray1, lap1, cv.CV_64F);
-        cv.Laplacian(smoothGray2, lap2, cv.CV_64F);
-        
+        cv.Laplacian(gray1, lap1, cv.CV_64F);
+        cv.Laplacian(gray2, lap2, cv.CV_64F);
+        matsToObjectDelete.push(lap1, lap2);
+
         let abs1 = new cv.Mat(), abs2 = new cv.Mat();
-        mats.push(abs1, abs2);
         cv.convertScaleAbs(lap1, abs1);
         cv.convertScaleAbs(lap2, abs2);
-        
+        matsToObjectDelete.push(abs1, abs2);
+
+        // --- STEP 4: MASK GENERATION ---
         let mask = new cv.Mat();
-        mats.push(mask);
-        cv.compare(abs1, abs2, mask, cv.CMP_GT);
-        
-        // Morphological cleanup
-        let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-        mats.push(kernel);
-        cv.morphologyEx(mask, mask, cv.MORPH_OPEN, kernel);
-        cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, kernel);
-        
-        // Edge-aware refinement
-        status.innerText = "Refining mask edges...";
-        let refinedMask = refineMask(mask, img1);
-        mats.push(refinedMask);
-        
-        // Soft mask with Gaussian blur
+        cv.compare(abs1, abs2, mask, cv.CMP_GT); // This is where 6704032 usually happens
+        matsToObjectDelete.push(mask);
+
+        let k = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+        cv.morphologyEx(mask, mask, cv.MORPH_OPEN, k);
+        matsToObjectDelete.push(k);
+
         let softMask = new cv.Mat();
-        mats.push(softMask);
-        cv.GaussianBlur(refinedMask, softMask, new cv.Size(31, 31), 0);
+        cv.GaussianBlur(mask, softMask, new cv.Size(31, 31), 0);
+        matsToObjectDelete.push(softMask);
+
+        // --- STEP 5: BLENDING ---
+        let result = fastAlphaBlend(img1, img2, softMask);
         
-        // Laplacian pyramid blending
-        status.innerText = "Blending with pyramid method...";
-        let result = laplacianPyramidBlend(img1, img2, softMask, 4);
-        mats.push(result);
-        
-        // Display result
-        let resCanvas = document.getElementById('resCanvas');
-        if(!resCanvas) {
-            resCanvas = document.createElement('canvas');
-            resCanvas.id = 'resCanvas';
-            document.body.appendChild(resCanvas);
-        }
         cv.imshow('resCanvas', result);
+        setupDownload(document.getElementById('resCanvas'));
+        result.delete();
         
-        setupDownload(resCanvas);
-        status.innerText = "🎉 Success! Quality Optimized with Advanced Blending.";
-        
+        status.innerText = "🎉 Success! Stable processing complete.";
+
     } catch (err) {
-        console.error(err);
-        status.innerText = "Error: " + (err.message || err);
-        snapBtn.disabled = false;
-        snapBtn.innerText = "Retry Capture";
+        console.error("OpenCV Error:", err);
+        status.innerText = "❌ Process failed. Try to hold steadier.";
     } finally {
-        // Clean up all tracked Mats
-        mats.forEach(mat => {
-            if (mat && !mat.isDeleted && !mat.isDeleted()) {
-                try { mat.delete(); } catch(e) {}
-            }
-        });
-        // Clear captured Mats
-        capturedMats.forEach(mat => {
-            if (mat && !mat.isDeleted && !mat.isDeleted()) {
-                try { mat.delete(); } catch(e) {}
-            }
-        });
-        capturedMats = [];
+        // Cleanup all temporary mats
+        matsToObjectDelete.forEach(m => { if(m && !m.isDeleted()) m.delete(); });
     }
+}
+
+// --- Fast Alpha Blending ---
+function fastAlphaBlend(img1, img2, softMask) {
+    let mats = [];
+    
+    // Ensure mask is 1-channel
+    let singleChannelMask = new cv.Mat();
+    if (softMask.channels() > 1) {
+        cv.cvtColor(softMask, singleChannelMask, cv.COLOR_RGBA2GRAY);
+    } else {
+        singleChannelMask = softMask.clone();
+    }
+    mats.push(singleChannelMask);
+
+    let maskFloat = new cv.Mat();
+    let invMaskFloat = new cv.Mat();
+    let ones = cv.Mat.ones(img1.rows, img1.cols, cv.CV_32F);
+    
+    singleChannelMask.convertTo(maskFloat, cv.CV_32F, 1.0/255.0);
+    cv.subtract(ones, maskFloat, invMaskFloat);
+    mats.push(maskFloat, invMaskFloat, ones);
+
+    let rgba1 = new cv.MatVector();
+    let rgba2 = new cv.MatVector();
+    cv.split(img1, rgba1);
+    cv.split(img2, rgba2);
+
+    let resultChannels = new cv.MatVector();
+
+    for (let i = 0; i < 3; i++) {
+        let c1 = new cv.Mat(), c2 = new cv.Mat(), blended = new cv.Mat();
+        rgba1.get(i).convertTo(c1, cv.CV_32F);
+        rgba2.get(i).convertTo(c2, cv.CV_32F);
+
+        cv.multiply(c1, maskFloat, c1);
+        cv.multiply(c2, invMaskFloat, c2);
+        cv.add(c1, c2, blended);
+
+        blended.convertTo(blended, cv.CV_8U);
+        resultChannels.push_back(blended);
+        c1.delete(); c2.delete(); blended.delete();
+    }
+    
+    resultChannels.push_back(rgba1.get(3)); // Alpha channel
+    let res = new cv.Mat();
+    cv.merge(resultChannels, res);
+
+    // Cleanup
+    rgba1.delete(); rgba2.delete(); resultChannels.delete();
+    mats.forEach(m => m.delete());
+
+    return res;
 }
 
 // --- UI Event Handlers ---
