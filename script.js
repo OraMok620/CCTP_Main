@@ -26,9 +26,9 @@ window.onload = () => {
 // It updates the status message, enables the snap button, and starts the camera.
 function onOpenCvReady() {
     //Notes 7: The status message informs the user that OpenCV is ready and provides further instructions.
-    status.innerText = "OpenCV Ready. Tap video to focus, then take photo.";
+    status.innerText = "OpenCV Ready. Tap screen to focus, then take photo.";
     snapBtn.disabled = false;
-    snapBtn.innerText = "📸 1. Take Photo of Object";
+    snapBtn.innerText = "Take photo for Object focused";
     startCamera();
 }
 
@@ -371,9 +371,9 @@ function processStacking() {
         // Motion detection
         status.innerText = "Checking for camera movement...";
         if (!detectMotion(img1, img2_raw)) {
-            status.innerText = "⚠️ Camera moved too much. Please retake background photo.";
+            status.innerText = "⚠️ Camera moved too much. Please take a new background photo.";
             snapBtn.disabled = false;
-            snapBtn.innerText = "📸 2. Retake Background Photo";
+            snapBtn.innerText = "Retake background";
             return;
         }
         
@@ -488,8 +488,8 @@ snapBtn.onclick = () => {
     previews.appendChild(thumb);
 
     if (capturedMats.length === 1) {
-        status.innerText = "Object captured! Now focus on background and snap.";
-        snapBtn.innerText = "📸 2. Take Background Photo";
+        status.innerText = "Object captured! Now focus on background.";
+        snapBtn.innerText = "Take Background Photo";
     } else if (capturedMats.length === 2) {
         snapBtn.disabled = true;
         snapBtn.innerText = "Processing...";
