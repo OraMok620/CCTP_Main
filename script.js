@@ -50,14 +50,14 @@ function alignWithORB(refMat, targetMat) {
     let des1 = new cv.Mat(), des2 = new cv.Mat();
     orb.detectAndCompute(refMat, new cv.Mat(), kp1, des1);
     orb.detectAndCompute(targetMat, new cv.Mat(), kp2, des2);
-    let bf = new cv.BFMatcher(cv.NORM_HAMMING, true);
+    let bf = new cv.BFMatcher(cv.NORM_HAMMING, false);
     let matches = new cv.DMatchVector();
     bf.match(des1, des2, matches);
     let goodMatches = [];
 
     for (let i = 0; i < matches.size(); i++) goodMatches.push(matches.get(i));
     goodMatches.sort((a, b) => a.distance - b.distance);
-    if (goodMatches.length < 8) throw "ORB Failed";
+    if (goodMatches.length < 20) throw "ORB Failed";
 
     let srcPts = [], dstPts = [];
 
@@ -202,16 +202,18 @@ function processStacking() {
         cv.convertScaleAbs(lap2, abs2);
 
         let mask = new cv.Mat();
-        cv.compare(abs1, abs2, mask, cv.CMP_GT);
+        let diff = new cv.Mat();
+        cv.subtract(abs1, abs2, diff);
+        cv.threshold(diff, mask, 5, 255, cv.THRESH_BINARY);
         
         let softMask = new cv.Mat();
-        cv.GaussianBlur(mask, softMask, new cv.Size(31, 31), 0);
+        cv.GaussianBlur(mask, softMask, new cv.Size(15, 15), 0);
 
         let result = fastAlphaBlend(img1, img2, softMask);
         
         let resCanvas = document.getElementById('resCanvas') || document.createElement('canvas');
         resCanvas.id = 'resCanvas';
-        if (!document.getElementById('resCanvas')) document.body.appendChild(resCanvas);
+        if (!document.getElementById('resCanvas')) previews.appendChild(resCanvas);
         
         cv.imshow(resCanvas, result);
         setupDownload(resCanvas);
@@ -283,6 +285,10 @@ video.onclick = async (e) => {
         await track.applyConstraints({
             advanced: [{ pointsOfInterest: [{x, y}] }]
         });
-        status.innerText = "Focus Locked.";
+        if (capturedMats.length === 0) {
+            status.innerText = "Foreground focus set. Now take Photo 1.";
+        } else {
+            status.innerText = "Background focus set. Now take Photo 2.";
+        }
     } catch (err) { console.warn(err); }
 };
