@@ -73,8 +73,12 @@ function alignWithORB(refMat, targetMat) {
     //20 is chosen as the threshold for good matches in feature-based image alignment, providing a balance between having enough matches for reliable homography estimation and avoiding too many false matches that can lead to incorrect alignments.
     if (goodMatches.length < 20) throw "ORB Failed";
 
+    //Create arrays to hold the coordinates of the matched key points from both images.
+    //newMarks holds the coordinates from the new photo.
+    //anchorPoints holds the coordinates from the original reference photo.
     let newMarks = [], anchorPoints = [];
 
+    //Loop through the good matches and extract the coordinates of the matched key points from both images.
     for (let i = 0; i < Math.min(goodMatches.length, 50); i++) {
         let coordinate_2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
         let coordinate_1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
@@ -82,14 +86,18 @@ function alignWithORB(refMat, targetMat) {
         anchorPoints.push(coordinate_1.x, coordinate_1.y);
     }
 
-    let srcMat = cv.matFromArray(newMarks.length / 2, 1, cv.CV_32FC2, newMarks);
-    let dstMat = cv.matFromArray(anchorPoints.length / 2, 1, cv.CV_32FC2, anchorPoints);
-    let h = cv.findHomography(srcMat, dstMat, cv.RANSAC, 3);
-    let aligned = new cv.Mat();
+    //Set up variables for calculating the homography transformation.
+    //destMatrix means destination matrix
+    //hm stands for homography matrix, which is a transformation that maps points from one image to another based on the matched key points.
+    //alignedResult is the resulting image after applying the homography transformation to the target image.
+    let sourceMatrix = cv.matFromArray(newMarks.length / 2, 1, cv.CV_32FC2, newMarks);
+    let destMatrix = cv.matFromArray(anchorPoints.length / 2, 1, cv.CV_32FC2, anchorPoints);
+    let hm = cv.findHomography(sourceMatrix, destMatrix, cv.RANSAC, 3);
+    let alignedResult = new cv.Mat();
 
-    cv.warpPerspective(targetMat, aligned, h, new cv.Size(refMat.cols, refMat.rows));
-    [orb, keyPoint_1, keyPoint_2, baseFeatures, targetFeatures, bf, matches, srcMat, dstMat, h].forEach(obj => { if (obj && obj.delete) obj.delete(); });
-    return aligned;
+    cv.warpPerspective(targetMat, alignedResult, hm, new cv.Size(refMat.cols, refMat.rows));
+    [orb, keyPoint_1, keyPoint_2, baseFeatures, targetFeatures, bf, matches, sourceMatrix, destMatrix, hm].forEach(obj => { if (obj && obj.delete) obj.delete(); });
+    return alignedResult;
 }
 
 // Notes 7: AKAZE is another feature detection and matching algorithm that is designed to be faster and more efficient than ORB, especially for larger images.
@@ -118,14 +126,14 @@ function alignWithAKAZE(refMat, targetMat) {
         anchorPoints.push(coordinate_1.x, coordinate_1.y);
     }
 
-    let srcMat = cv.matFromArray(newMarks.length / 2, 1, cv.CV_32FC2, newMarks);
-    let dstMat = cv.matFromArray(anchorPoints.length / 2, 1, cv.CV_32FC2, anchorPoints);
-    let h = cv.findHomography(srcMat, dstMat, cv.RANSAC, 3);
-    let aligned = new cv.Mat();
-    cv.warpPerspective(targetMat, aligned, h, new cv.Size(refMat.cols, refMat.rows));
+    let sourceMatrix = cv.matFromArray(newMarks.length / 2, 1, cv.CV_32FC2, newMarks);
+    let destMatrix = cv.matFromArray(anchorPoints.length / 2, 1, cv.CV_32FC2, anchorPoints);
+    let hm = cv.findHomography(sourceMatrix, destMatrix, cv.RANSAC, 3);
+    let alignedResult = new cv.Mat();
+    cv.warpPerspective(targetMat, alignedResult, hm, new cv.Size(refMat.cols, refMat.rows));
 
-    [akaze, keyPoint_1, keyPoint_2, baseFeatures, targetFeatures, bf, matches, srcMat, dstMat, h].forEach(obj => { if (obj && obj.delete) obj.delete(); });
-    return aligned;
+    [akaze, keyPoint_1, keyPoint_2, baseFeatures, targetFeatures, bf, matches, sourceMatrix, destMatrix, hm].forEach(obj => { if (obj && obj.delete) obj.delete(); });
+    return alignedResult;
 }
 
 // Notes 8: Template Matching is a technique in computer vision used to find a smaller image (template) within a larger image (target). 
@@ -141,11 +149,11 @@ function alignWithTemplateMatching(refMat, targetMat) {
     let minMax = cv.minMaxLoc(result);
     let maxLoc = minMax.maxLoc;
     let M = cv.matFromArray(2, 3, cv.CV_64F, [1, 0, -maxLoc.x, 0, 1, -maxLoc.y]);
-    let aligned = new cv.Mat();
-    cv.warpAffine(targetMat, aligned, M, new cv.Size(refMat.cols, refMat.rows));
+    let alignedResult = new cv.Mat();
+    cv.warpAffine(targetMat, alignedResult, M, new cv.Size(refMat.cols, refMat.rows));
 
     [grayRef, grayTarget, result, mask, M].forEach(m => m.delete());
-    return aligned;
+    return alignedResult;
 }
 
 // Notes 9: robustAlignment is a function that tries multiple alignment strategies in sequence (ORB, AKAZE, Template Matching) and falls back to the raw capture if all else fails.
