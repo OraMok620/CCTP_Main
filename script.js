@@ -6,7 +6,8 @@ const status = document.getElementById('status');
 const previews = document.getElementById('previews');
 const hiddenCanvas = document.getElementById('hiddenCanvas');
 
-// Notes 2: capturedMats holds the OpenCV Mat objects for the captured images.
+// Notes 2: capturedMats holds the OpenCV Mat objects for the captured images, 
+// MAX_WIDTH is a constant that limits the width of the captured images to ensure better performance during processing.
 let capturedMats = [];
 const MAX_WIDTH = 1024;
 
@@ -20,11 +21,11 @@ window.onload = () => {
     }, 500);
 };
 
-// Notes 4: onOpenCvReady initializes the app once OpenCV is ready, enabling the snap button and starting the camera.
+// Notes 4: onOpenCvReady initializes the app once OpenCV is ready, enabling the button and starting the camera.
 function onOpenCvReady() {
-    status.innerText = "OpenCV Ready. Take your two photos.";
+    status.innerText = "It's ready! Follow the instructions below.";
     snapBtn.disabled = false;
-    snapBtn.innerText = "📸 1. Take First Photo";
+    snapBtn.innerText = "Take photo focus on object.";
     startCamera();
 }
 
