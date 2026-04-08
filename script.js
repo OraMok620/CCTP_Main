@@ -1,4 +1,4 @@
-// Notes 1: document.getElementById is used to access HTML elements by their ID.
+//Notes 1: General concept ---> document.getElementById is used to access HTML elements by their ID.
 const video = document.getElementById('video');
 const captureBtn = document.getElementById('capture');
 const restartBtn = document.getElementById('restart');
@@ -6,8 +6,10 @@ const status = document.getElementById('status');
 const previews = document.getElementById('previews');
 const hiddenCanvas = document.getElementById('hiddenCanvas');
 
-// Notes 2: capturedMats holds the OpenCV Mat objects for the captured images, 
-// MAX_WIDTH is a constant that limits the width of the captured images to ensure better performance during processing.
+//setting global variables and constants for the web app. 
+//Notes 2: capturedMats is the array that stores the OpenCV Mat objects for the captured images
+//MAX_WIDTH is a constant that limits the width of the captured images to ensure better performance during processing.
+//1024 pixels is a widely adopted standard for web images, providing a strong balance between high-quality visuals and fast performance.
 let capturedMats = [];
 const MAX_WIDTH = 1024;
 
