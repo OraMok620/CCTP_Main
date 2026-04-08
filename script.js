@@ -1,7 +1,7 @@
 // Notes 1: document.getElementById is used to access HTML elements by their ID.
 const video = document.getElementById('video');
 const snapBtn = document.getElementById('snap');
-const rtartBtn = document.getElementById('restart');
+const retartBtn = document.getElementById('restart');
 const status = document.getElementById('status');
 const previews = document.getElementById('previews');
 const hiddenCanvas = document.getElementById('hiddenCanvas');
