@@ -13,18 +13,19 @@ const hiddenCanvas = document.getElementById('hiddenCanvas');
 let capturedMats = [];
 const MAX_WIDTH = 1024;
 
-// Notes 3: Wait for OpenCV.js to load before initializing the app.
+//Notes 3: window.onload is an event that triggers when the entire page has finished loading.
 window.onload = () => {
+    // Check if OpenCV is loaded and ready. If not, keep checking every 500milliseconds until it is. 
     let checkCV = setInterval(() => {
         if (typeof cv !== 'undefined' && cv.Mat) {
             clearInterval(checkCV);
-            onOpenCvReady();
+            openCVisReady();
         }
     }, 500);
 };
 
-// Notes 4: onOpenCvReady initializes the app once OpenCV is ready, enabling the button and starting the camera.
-function onOpenCvReady() {
+// Notes 4: openCVisReady initializes the app once OpenCV is ready, enabling the button and starting the camera.
+function openCVisReady() {
     status.innerText = "It's ready! Follow the instructions below.";
     captureBtn.disabled = false;
     captureBtn.innerText = "Take photo focus on object.";
