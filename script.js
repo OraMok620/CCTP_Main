@@ -1,7 +1,7 @@
 // Notes 1: document.getElementById is used to access HTML elements by their ID.
 const video = document.getElementById('video');
-const snapBtn = document.getElementById('snapBtn');
-const resetBtn = document.getElementById('resetBtn');
+const snapBtn = document.getElementById('snap');
+const resetBtn = document.getElementById('reset');
 const status = document.getElementById('status');
 const previews = document.getElementById('previews');
 const hiddenCanvas = document.getElementById('hiddenCanvas');
@@ -250,7 +250,7 @@ snapBtn.onclick = () => {
         snapBtn.innerText = "📸 2. Take Second Photo";
     } else if (capturedMats.length === 2) {
         snapBtn.disabled = true;
-        snapBtn.innerText = "Processing...";
+        snapBtn.innerText = "Heads down, processing...";
         resetBtn.style.display = "inline-block";
         setTimeout(processStacking, 100);
     }
@@ -258,7 +258,7 @@ snapBtn.onclick = () => {
 
 // Notes 13: setupDownload creates a download button that allows the user to save the resulting blended image as a JPEG file.
 function setupDownload(canvas) {
-    const downloadBtn = document.getElementById('downloadBtn');
+    const downloadBtn = document.getElementById('download');
     downloadBtn.style.display = "inline-block";
     downloadBtn.onclick = () => {
         const link = document.createElement('a');
