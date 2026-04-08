@@ -37,7 +37,7 @@ function openCVisReady() {
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' }, //Additional hint: There are 2 facing modes: 'user' (front) and 'environment' (back / rear). 
+            video: { facingMode: 'environment' }, //Additional hint: There are 2 facing modes: 'user' (front camera > 自拍用) and 'environment' (back camera). 
             audio: false  // We don't need audio for this app.
         });
         video.srcObject = stream;
@@ -51,21 +51,26 @@ async function startCamera() {
 //In this code, ORB is used to align two images by finding matching key points between them and computing a homography transformation.
 function alignWithORB(refMat, targetMat) {
     let orb = new cv.ORB(); //cv.orb is a class in OpenCV that implements  which the ORB stand for *O*riented FAST and *R*otated *B*RIEF feature detection and description algorithm.
-    let keyPoint_1 = new cv.KeyPointVector(), keyPoint_2 = new cv.KeyPointVector(); //cv.keyPointVector is a data structure used in OpenCV to store key points detected in an image. Here, keyPoint_1 and keyPoint_2 will hold the key points for the reference and target images, respectively.
-    let baseFeatures = new cv.Mat(), targetFeatures = new cv.Mat(); //cv.mat is a matrix data structure used in OpenCV to store image data, descriptors, and other information. Here, baseFeatures and targetFeatures will hold the descriptors for the key points detected in the reference and target images, respectively.
+    let keyPoint_1 = new cv.KeyPointVector(), keyPoint_2 = new cv.KeyPointVector(); //cv.keyPointVector is a data structure used in OpenCV to store key points detected in an image. keyPoint_1 and keyPoint_2 will hold the key points for the reference and target images respectively.
+    let baseFeatures = new cv.Mat(), targetFeatures = new cv.Mat(); //cv.mat is a matrix data structure used in OpenCV to store image data, descriptors, and other information. baseFeatures and targetFeatures will hold the descriptors for the key points detected in the reference and target images respectively.
     //orb.detectAndCompute is a method that detects key points and computes their descriptors in a single step. 
     //(refMat, new cv.Mat() are the input image and mask for the reference image, while keyPoint_1 and baseFeatures are the output key points and descriptors.
     orb.detectAndCompute(refMat, new cv.Mat(), keyPoint_1, baseFeatures); //refMat is the input image for which key points and descriptors are to be computed.
     orb.detectAndCompute(targetMat, new cv.Mat(), keyPoint_2, targetFeatures); //targetMat is the input image for which key points and descriptors are to be computed.
     //cv.BFMatcher is a brute-force matcher that matches descriptors between two sets. 
-    // cv.NORM_HAMMING indicates that the Hamming distance is used for matching, which is suitable for binary descriptors like those produced by ORB. The second parameter 'false' indicates that we want to find the best match for each descriptor.
+    //cv.NORM_HAMMING indicates that the Hamming distance is used for matching, which is suitable for binary descriptors like those produced by ORB. The second parameter 'false' indicates that we want to find the best match for each descriptor.
+    //cv.DMatchVector is a data structure used in OpenCV to store the matches between descriptors.
     let bf = new cv.BFMatcher(cv.NORM_HAMMING, false); 
-    let matches = new cv.DMatchVector();
-    bf.match(baseFeatures, targetFeatures, matches);
+    let matches = new cv.DMatchVector(); 
+    bf.match(baseFeatures, targetFeatures, matches); 
+    //Store the matches in an array and sort them based on their distance.
     let goodMatches = [];
-
+    //Loop through the matches and push them into the goodMatches array. 
+    //The distance property of each match indicates how closely the descriptors match, with lower values indicating better matches.
     for (let i = 0; i < matches.size(); i++) goodMatches.push(matches.get(i));
     goodMatches.sort((a, b) => a.distance - b.distance);
+    //If there are fewer than 20 good matches, the ORB alignment is considered to have failed and an error is thrown.
+    //20 is chosen as the threshold for good matches in feature-based image alignment, providing a balance between having enough matches for reliable homography estimation and avoiding too many false matches that can lead to incorrect alignments.
     if (goodMatches.length < 20) throw "ORB Failed";
 
     let srcPts = [], dstPts = [];
