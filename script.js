@@ -48,8 +48,7 @@ async function startCamera() {
 
 //Notes 6: ORB is a popular feature detection and matching algorithm in computer vision. 
 //It is used to find key points and descriptors in images, which can then be used for tasks like image alignment, object recognition, and more. 
-//In this code, ORB is used to align two images by finding matching key points between them and computing a homography transformation.
-function alignWithORB(refMat, targetMat) {
+function matchLayout(refMat, targetMat) {
     let orb = new cv.ORB(); //cv.orb is a class in OpenCV that implements  which the ORB stand for *O*riented FAST and *R*otated *B*RIEF feature detection and description algorithm.
     let keyPoint_1 = new cv.KeyPointVector(), keyPoint_2 = new cv.KeyPointVector(); //cv.keyPointVector is a data structure used in OpenCV to store key points detected in an image. keyPoint_1 and keyPoint_2 will hold the key points for the reference and target images respectively.
     let baseFeatures = new cv.Mat(), targetFeatures = new cv.Mat(); //cv.mat is a matrix data structure used in OpenCV to store image data, descriptors, and other information. baseFeatures and targetFeatures will hold the descriptors for the key points detected in the reference and target images respectively.
@@ -90,18 +89,24 @@ function alignWithORB(refMat, targetMat) {
     //destMatrix means destination matrix
     //hm stands for homography matrix, which is a transformation that maps points from one image to another based on the matched key points.
     //alignedResult is the resulting image after applying the homography transformation to the target image.
+    //CV_32FC2 is a data type in OpenCV that represents a 2-channel floating-point matrix, where each element is a pair of (x, y) coordinates.
     let sourceMatrix = cv.matFromArray(newMarks.length / 2, 1, cv.CV_32FC2, newMarks);
     let destMatrix = cv.matFromArray(anchorPoints.length / 2, 1, cv.CV_32FC2, anchorPoints);
+    //cv.RANSAC is a robust method for estimating the homography transformation while minimizing the influence of outliers in the matched key points. 
+    //The parameter '3' is the maximum allowed reprojection error to treat a point pair as an inlier.
     let hm = cv.findHomography(sourceMatrix, destMatrix, cv.RANSAC, 3);
     let alignedResult = new cv.Mat();
 
+    //cv.warpPerspective applies the homography transformation to the target image, aligning it with the reference image.
+    //The resulting aligned image is stored in alignedResult, which has the same size as the reference image.
     cv.warpPerspective(targetMat, alignedResult, hm, new cv.Size(refMat.cols, refMat.rows));
     [orb, keyPoint_1, keyPoint_2, baseFeatures, targetFeatures, bf, matches, sourceMatrix, destMatrix, hm].forEach(obj => { if (obj && obj.delete) obj.delete(); });
     return alignedResult;
 }
 
 // Notes 7: AKAZE is another feature detection and matching algorithm that is designed to be faster and more efficient than ORB, especially for larger images.
-function alignWithAKAZE(refMat, targetMat) {
+function refineAlignment(refMat, targetMat) {
+    // Similar coding structure compared to the ORB-based alignment, but using AKAZE for feature detection and matching.
     let akaze = cv.AKAZE.create();
     let keyPoint_1 = new cv.KeyPointVector(), keyPoint_2 = new cv.KeyPointVector();
     let baseFeatures = new cv.Mat(), targetFeatures = new cv.Mat();
@@ -111,27 +116,21 @@ function alignWithAKAZE(refMat, targetMat) {
     let matches = new cv.DMatchVector();
     bf.match(baseFeatures, targetFeatures, matches);
     let goodMatches = [];
-
     for (let i = 0; i < matches.size(); i++) goodMatches.push(matches.get(i));
     goodMatches.sort((a, b) => a.distance - b.distance);
-
     if (goodMatches.length < 4) throw "AKAZE Failed";
-
     let newMarks = [], anchorPoints = [];
-
     for (let i = 0; i < Math.min(goodMatches.length, 40); i++) {
         let coordinate_2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
         let coordinate_1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
         newMarks.push(coordinate_2.x, coordinate_2.y);
         anchorPoints.push(coordinate_1.x, coordinate_1.y);
     }
-
     let sourceMatrix = cv.matFromArray(newMarks.length / 2, 1, cv.CV_32FC2, newMarks);
     let destMatrix = cv.matFromArray(anchorPoints.length / 2, 1, cv.CV_32FC2, anchorPoints);
     let hm = cv.findHomography(sourceMatrix, destMatrix, cv.RANSAC, 3);
     let alignedResult = new cv.Mat();
     cv.warpPerspective(targetMat, alignedResult, hm, new cv.Size(refMat.cols, refMat.rows));
-
     [akaze, keyPoint_1, keyPoint_2, baseFeatures, targetFeatures, bf, matches, sourceMatrix, destMatrix, hm].forEach(obj => { if (obj && obj.delete) obj.delete(); });
     return alignedResult;
 }
@@ -151,7 +150,6 @@ function alignWithTemplateMatching(refMat, targetMat) {
     let M = cv.matFromArray(2, 3, cv.CV_64F, [1, 0, -maxLoc.x, 0, 1, -maxLoc.y]);
     let alignedResult = new cv.Mat();
     cv.warpAffine(targetMat, alignedResult, M, new cv.Size(refMat.cols, refMat.rows));
-
     [grayRef, grayTarget, result, mask, M].forEach(m => m.delete());
     return alignedResult;
 }
@@ -159,8 +157,8 @@ function alignWithTemplateMatching(refMat, targetMat) {
 // Notes 9: robustAlignment is a function that tries multiple alignment strategies in sequence (ORB, AKAZE, Template Matching) and falls back to the raw capture if all else fails.
 function robustAlignment(refMat, targetMat) {
     let strategies = [
-        () => alignWithORB(refMat, targetMat),
-        () => alignWithAKAZE(refMat, targetMat),
+        () => matchLayout(refMat, targetMat),
+        () => refineAlignment(refMat, targetMat),
         () => alignWithTemplateMatching(refMat, targetMat),
         () => { 
             console.warn("Using raw capture fallback."); 
