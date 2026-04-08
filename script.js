@@ -1,7 +1,7 @@
 // Notes 1: document.getElementById is used to access HTML elements by their ID.
 const video = document.getElementById('video');
 const snapBtn = document.getElementById('snap');
-const resetBtn = document.getElementById('reset');
+const rtartBtn = document.getElementById('restart');
 const status = document.getElementById('status');
 const previews = document.getElementById('previews');
 const hiddenCanvas = document.getElementById('hiddenCanvas');
@@ -232,7 +232,7 @@ function processStacking() {
 // Notes 12: The snap button's onclick event captures the current video frame, creates an OpenCV Mat from it, and adds it to the capturedMats array. 
 // It also updates the UI to show the captured image and changes the button text for the next capture. 
 // Once two images are captured, it disables the snap button and starts the processing. 
-// The reset button simply reloads the page to start over.
+// The restart button simply reloads the page to start over.
 snapBtn.onclick = () => {
     const canvas = document.createElement('canvas');
     canvas.width = Math.min(video.videoWidth, MAX_WIDTH);
@@ -249,11 +249,11 @@ snapBtn.onclick = () => {
     previews.appendChild(img);
 
     if (capturedMats.length === 1) {
-        snapBtn.innerText = "📸 2. Take Second Photo";
+        snapBtn.innerText = "Take photo focus focus on background.";
     } else if (capturedMats.length === 2) {
         snapBtn.disabled = true;
-        snapBtn.innerText = "Heads down, processing...";
-        resetBtn.style.display = "inline-block";
+        snapBtn.innerText = "Download your photo below or try again.";
+        restartBtn.style.display = "inline-block";
         setTimeout(processStacking, 100);
     }
 };
@@ -270,8 +270,8 @@ function setupDownload(canvas) {
     };
 }
 
-// Notes 14: The reset button's onclick event simply reloads the page, allowing the user to start the process over with new captures.
-resetBtn.onclick = () => { location.reload(); };
+// Notes 14: The restart button's onclick event simply reloads the page, allowing the user to start the process over with new captures.
+restartBtn.onclick = () => { location.reload(); };
 
 // Notes 15: The video element's onclick event allows the user to tap on the video feed to set a focus point. 
 // It calculates the relative x and y coordinates of the click within the video element and applies constraints to the video track to set the focus point accordingly. 
