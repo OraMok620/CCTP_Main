@@ -68,10 +68,10 @@ function alignWithORB(refMat, targetMat) {
     let srcPts = [], dstPts = [];
 
     for (let i = 0; i < Math.min(goodMatches.length, 50); i++) {
-        let p2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
-        let p1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
-        srcPts.push(p2.x, p2.y);
-        dstPts.push(p1.x, p1.y);
+        let coordinate_2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
+        let coordinate_1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
+        srcPts.push(coordinate_2.x, coordinate_2.y);
+        dstPts.push(coordinate_1.x, coordinate_1.y);
     }
 
     let srcMat = cv.matFromArray(srcPts.length / 2, 1, cv.CV_32FC2, srcPts);
@@ -104,10 +104,10 @@ function alignWithAKAZE(refMat, targetMat) {
     let srcPts = [], dstPts = [];
 
     for (let i = 0; i < Math.min(goodMatches.length, 40); i++) {
-        let p2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
-        let p1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
-        srcPts.push(p2.x, p2.y);
-        dstPts.push(p1.x, p1.y);
+        let coordinate_2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
+        let coordinate_1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
+        srcPts.push(coordinate_2.x, coordinate_2.y);
+        dstPts.push(coordinate_1.x, coordinate_1.y);
     }
 
     let srcMat = cv.matFromArray(srcPts.length / 2, 1, cv.CV_32FC2, srcPts);
