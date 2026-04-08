@@ -30,6 +30,7 @@ function onOpenCvReady() {
 }
 
 // Notes 5: startCamera uses the MediaDevices API to access the user's camera, requesting the environment-facing camera for better quality.
+// New learning : async allows a program to start a potentially long-running operation and still be able to respond to other events while waiting for the operation to complete.
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -44,12 +45,12 @@ async function startCamera() {
 
 //Notes 6: ORB is a popular feature detection and matching algorithm in computer vision. 
 //It is used to find key points and descriptors in images, which can then be used for tasks like image alignment, object recognition, and more. 
-//In this code, we use ORB to align two images by finding matching key points between them and computing a homography transformation.
+//In this code, ORB is used to align two images by finding matching key points between them and computing a homography transformation.
 function alignWithORB(refMat, targetMat) {
-    let orb = new cv.ORB();
-    let kp1 = new cv.KeyPointVector(), kp2 = new cv.KeyPointVector();
-    let des1 = new cv.Mat(), des2 = new cv.Mat();
-    orb.detectAndCompute(refMat, new cv.Mat(), kp1, des1);
+    let orb = new cv.ORB(); //cv.orb is a class in OpenCV that implements  which the ORB stand for *O*riented FAST and *R*otated *B*RIEF feature detection and description algorithm.
+    let kp1 = new cv.KeyPointVector(), kp2 = new cv.KeyPointVector(); //cv.keyPointVector is a data structure used in OpenCV to store key points detected in an image. Here, kp1 and kp2 will hold the key points for the reference and target images, respectively.
+    let des1 = new cv.Mat(), des2 = new cv.Mat(); //cv.mat is a matrix data structure used in OpenCV to store image data, descriptors, and other information. Here, des1 and des2 will hold the descriptors for the key points detected in the reference and target images, respectively.
+    orb.detectAndCompute(refMat, new cv.Mat(), kp1, des1); 
     orb.detectAndCompute(targetMat, new cv.Mat(), kp2, des2);
     let bf = new cv.BFMatcher(cv.NORM_HAMMING, false);
     let matches = new cv.DMatchVector();
