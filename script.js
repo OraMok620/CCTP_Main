@@ -73,17 +73,17 @@ function alignWithORB(refMat, targetMat) {
     //20 is chosen as the threshold for good matches in feature-based image alignment, providing a balance between having enough matches for reliable homography estimation and avoiding too many false matches that can lead to incorrect alignments.
     if (goodMatches.length < 20) throw "ORB Failed";
 
-    let srcPts = [], dstPts = [];
+    let newMarks = [], anchorPoints = [];
 
     for (let i = 0; i < Math.min(goodMatches.length, 50); i++) {
         let coordinate_2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
         let coordinate_1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
-        srcPts.push(coordinate_2.x, coordinate_2.y);
-        dstPts.push(coordinate_1.x, coordinate_1.y);
+        newMarks.push(coordinate_2.x, coordinate_2.y);
+        anchorPoints.push(coordinate_1.x, coordinate_1.y);
     }
 
-    let srcMat = cv.matFromArray(srcPts.length / 2, 1, cv.CV_32FC2, srcPts);
-    let dstMat = cv.matFromArray(dstPts.length / 2, 1, cv.CV_32FC2, dstPts);
+    let srcMat = cv.matFromArray(newMarks.length / 2, 1, cv.CV_32FC2, newMarks);
+    let dstMat = cv.matFromArray(anchorPoints.length / 2, 1, cv.CV_32FC2, anchorPoints);
     let h = cv.findHomography(srcMat, dstMat, cv.RANSAC, 3);
     let aligned = new cv.Mat();
 
@@ -109,17 +109,17 @@ function alignWithAKAZE(refMat, targetMat) {
 
     if (goodMatches.length < 4) throw "AKAZE Failed";
 
-    let srcPts = [], dstPts = [];
+    let newMarks = [], anchorPoints = [];
 
     for (let i = 0; i < Math.min(goodMatches.length, 40); i++) {
         let coordinate_2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
         let coordinate_1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
-        srcPts.push(coordinate_2.x, coordinate_2.y);
-        dstPts.push(coordinate_1.x, coordinate_1.y);
+        newMarks.push(coordinate_2.x, coordinate_2.y);
+        anchorPoints.push(coordinate_1.x, coordinate_1.y);
     }
 
-    let srcMat = cv.matFromArray(srcPts.length / 2, 1, cv.CV_32FC2, srcPts);
-    let dstMat = cv.matFromArray(dstPts.length / 2, 1, cv.CV_32FC2, dstPts);
+    let srcMat = cv.matFromArray(newMarks.length / 2, 1, cv.CV_32FC2, newMarks);
+    let dstMat = cv.matFromArray(anchorPoints.length / 2, 1, cv.CV_32FC2, anchorPoints);
     let h = cv.findHomography(srcMat, dstMat, cv.RANSAC, 3);
     let aligned = new cv.Mat();
     cv.warpPerspective(targetMat, aligned, h, new cv.Size(refMat.cols, refMat.rows));
