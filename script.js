@@ -50,9 +50,13 @@ function alignWithORB(refMat, targetMat) {
     let orb = new cv.ORB(); //cv.orb is a class in OpenCV that implements  which the ORB stand for *O*riented FAST and *R*otated *B*RIEF feature detection and description algorithm.
     let kp1 = new cv.KeyPointVector(), kp2 = new cv.KeyPointVector(); //cv.keyPointVector is a data structure used in OpenCV to store key points detected in an image. Here, kp1 and kp2 will hold the key points for the reference and target images, respectively.
     let des1 = new cv.Mat(), des2 = new cv.Mat(); //cv.mat is a matrix data structure used in OpenCV to store image data, descriptors, and other information. Here, des1 and des2 will hold the descriptors for the key points detected in the reference and target images, respectively.
-    orb.detectAndCompute(refMat, new cv.Mat(), kp1, des1); 
-    orb.detectAndCompute(targetMat, new cv.Mat(), kp2, des2);
-    let bf = new cv.BFMatcher(cv.NORM_HAMMING, false);
+    //orb.detectAndCompute is a method that detects key points and computes their descriptors in a single step. 
+    //(refMat, new cv.Mat() are the input image and mask for the reference image, while kp1 and des1 are the output key points and descriptors.
+    orb.detectAndCompute(refMat, new cv.Mat(), kp1, des1); //refMat is the input image for which key points and descriptors are to be computed.
+    orb.detectAndCompute(targetMat, new cv.Mat(), kp2, des2); //targetMat is the input image for which key points and descriptors are to be computed.
+    //cv.BFMatcher is a brute-force matcher that matches descriptors between two sets. 
+    // cv.NORM_HAMMING indicates that the Hamming distance is used for matching, which is suitable for binary descriptors like those produced by ORB. The second parameter 'false' indicates that we want to find the best match for each descriptor.
+    let bf = new cv.BFMatcher(cv.NORM_HAMMING, false); 
     let matches = new cv.DMatchVector();
     bf.match(des1, des2, matches);
     let goodMatches = [];
