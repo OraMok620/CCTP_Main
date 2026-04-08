@@ -1,7 +1,7 @@
 // Notes 1: document.getElementById is used to access HTML elements by their ID.
 const video = document.getElementById('video');
-const snapBtn = document.getElementById('snap');
-const retartBtn = document.getElementById('restart');
+const captureBtn = document.getElementById('capture');
+const restartBtn = document.getElementById('restart');
 const status = document.getElementById('status');
 const previews = document.getElementById('previews');
 const hiddenCanvas = document.getElementById('hiddenCanvas');
@@ -24,8 +24,8 @@ window.onload = () => {
 // Notes 4: onOpenCvReady initializes the app once OpenCV is ready, enabling the button and starting the camera.
 function onOpenCvReady() {
     status.innerText = "It's ready! Follow the instructions below.";
-    snapBtn.disabled = false;
-    snapBtn.innerText = "Take photo focus on object.";
+    captureBtn.disabled = false;
+    captureBtn.innerText = "Take photo focus on object.";
     startCamera();
 }
 
@@ -237,7 +237,7 @@ function processStacking() {
 // It also updates the UI to show the captured image and changes the button text for the next capture. 
 // Once two images are captured, it disables the snap button and starts the processing. 
 // The restart button simply reloads the page to start over.
-snapBtn.onclick = () => {
+captureBtn.onclick = () => {
     const canvas = document.createElement('canvas');
     canvas.width = Math.min(video.videoWidth, MAX_WIDTH);
     canvas.height = (canvas.width / video.videoWidth) * video.videoHeight;
@@ -253,10 +253,10 @@ snapBtn.onclick = () => {
     previews.appendChild(img);
 
     if (capturedMats.length === 1) {
-        snapBtn.innerText = "Take photo focus focus on background.";
+        captureBtn.innerText = "Take photo focus focus on background.";
     } else if (capturedMats.length === 2) {
-        snapBtn.disabled = true;
-        snapBtn.innerText = "Download your photo below or try again.";
+        captureBtn.disabled = true;
+        captureBtn.innerText = "Download your photo below or try again.";
         restartBtn.style.display = "inline-block";
         setTimeout(processStacking, 100);
     }
