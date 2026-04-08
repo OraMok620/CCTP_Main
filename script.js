@@ -135,28 +135,36 @@ function refineAlignment(refMat, targetMat) {
     return alignedResult;
 }
 
-// Notes 8: Template Matching is a technique in computer vision used to find a smaller image (template) within a larger image (target). 
-// It works by sliding the template over the target image and comparing the template with the overlapping region of the target image using a similarity metric. 
-// In this code, we use normalized cross-correlation (cv.TM_CCOEFF_NORMED) as the similarity metric to find the best match of the reference image within the target image, and then align it accordingly.   
+// Notes 8: alignWithTemplateMatching is a simpler alignment method that uses template matching to find the best match of the reference image within the target image.
 function alignWithTemplateMatching(refMat, targetMat) {
+    //grayRef stand for grayscale reference image, grayTarget stands for grayscale target image.
+    //Grayscaling is the process of converting an image from other color spaces e.g. RGB, CMYK, HSV, etc. to shades of gray, where each pixel's intensity is represented by a single value.
     let grayRef = new cv.Mat(), grayTarget = new cv.Mat();
+    //cv.cvtColor is a function that converts an image from one color space to another. 
+    //In this case, it converts the reference and target images from RGBA color space to grayscale.
     cv.cvtColor(refMat, grayRef, cv.COLOR_RGBA2GRAY);
     cv.cvtColor(targetMat, grayTarget, cv.COLOR_RGBA2GRAY);
+    //result that will hold the output of the template matching process.
+    //mask is an optional parameter that can be used to specify a mask for the template matching operation.
     let result = new cv.Mat();
     let mask = new cv.Mat();
     cv.matchTemplate(grayTarget, grayRef, result, cv.TM_CCOEFF_NORMED, mask);
+    //Belows are the steps to find the location of the best match in the result of template matching and then align the target image based on that location.
     let minMax = cv.minMaxLoc(result);
     let maxLoc = minMax.maxLoc;
     let M = cv.matFromArray(2, 3, cv.CV_64F, [1, 0, -maxLoc.x, 0, 1, -maxLoc.y]);
     let alignedResult = new cv.Mat();
+    //warpAffine applies an affine transformation to the target image using the transformation matrix M, which shifts the image based on the location of the best match found in the template matching step.
     cv.warpAffine(targetMat, alignedResult, M, new cv.Size(refMat.cols, refMat.rows));
     [grayRef, grayTarget, result, mask, M].forEach(m => m.delete());
     return alignedResult;
 }
 
-// Notes 9: robustAlignment is a function that tries multiple alignment strategies in sequence (ORB, AKAZE, Template Matching) and falls back to the raw capture if all else fails.
-function robustAlignment(refMat, targetMat) {
+// Notes 9: A function that tries multiple alignment strategies in sequence (ORB, AKAZE, Template Matching) and falls back to the raw capture if all else fails.
+function searchForBestAlignment(refMat, targetMat) {
     let strategies = [
+        //() is used to define an anonymous function that can be called later. 
+        //Each strategy is wrapped in a function that can be executed in sequence, allowing for a fallback mechanism if one strategy fails.
         () => matchLayout(refMat, targetMat),
         () => refineAlignment(refMat, targetMat),
         () => alignWithTemplateMatching(refMat, targetMat),
@@ -169,7 +177,8 @@ function robustAlignment(refMat, targetMat) {
         try {
             return strategy();
         } catch (e) {
-            console.warn("Next strategy...");
+            console.warn("Alignment strategy failed:");
+            console.error(e);
         }
     }
 }
@@ -296,7 +305,6 @@ restartBtn.onclick = () => { location.reload(); };
 // If successful, it updates the status message to indicate that focus is locked.   
 video.onclick = async (e) => {
     const track = video.srcObject.getVideoTracks()[0];
-    const capabilities = track.getCapabilities();
     const rect = video.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
