@@ -48,12 +48,12 @@ async function startCamera() {
 //In this code, ORB is used to align two images by finding matching key points between them and computing a homography transformation.
 function alignWithORB(refMat, targetMat) {
     let orb = new cv.ORB(); //cv.orb is a class in OpenCV that implements  which the ORB stand for *O*riented FAST and *R*otated *B*RIEF feature detection and description algorithm.
-    let kp1 = new cv.KeyPointVector(), kp2 = new cv.KeyPointVector(); //cv.keyPointVector is a data structure used in OpenCV to store key points detected in an image. Here, kp1 and kp2 will hold the key points for the reference and target images, respectively.
+    let keyPoint_1 = new cv.KeyPointVector(), keyPoint_2 = new cv.KeyPointVector(); //cv.keyPointVector is a data structure used in OpenCV to store key points detected in an image. Here, keyPoint_1 and keyPoint_2 will hold the key points for the reference and target images, respectively.
     let des1 = new cv.Mat(), des2 = new cv.Mat(); //cv.mat is a matrix data structure used in OpenCV to store image data, descriptors, and other information. Here, des1 and des2 will hold the descriptors for the key points detected in the reference and target images, respectively.
     //orb.detectAndCompute is a method that detects key points and computes their descriptors in a single step. 
-    //(refMat, new cv.Mat() are the input image and mask for the reference image, while kp1 and des1 are the output key points and descriptors.
-    orb.detectAndCompute(refMat, new cv.Mat(), kp1, des1); //refMat is the input image for which key points and descriptors are to be computed.
-    orb.detectAndCompute(targetMat, new cv.Mat(), kp2, des2); //targetMat is the input image for which key points and descriptors are to be computed.
+    //(refMat, new cv.Mat() are the input image and mask for the reference image, while keyPoint_1 and des1 are the output key points and descriptors.
+    orb.detectAndCompute(refMat, new cv.Mat(), keyPoint_1, des1); //refMat is the input image for which key points and descriptors are to be computed.
+    orb.detectAndCompute(targetMat, new cv.Mat(), keyPoint_2, des2); //targetMat is the input image for which key points and descriptors are to be computed.
     //cv.BFMatcher is a brute-force matcher that matches descriptors between two sets. 
     // cv.NORM_HAMMING indicates that the Hamming distance is used for matching, which is suitable for binary descriptors like those produced by ORB. The second parameter 'false' indicates that we want to find the best match for each descriptor.
     let bf = new cv.BFMatcher(cv.NORM_HAMMING, false); 
@@ -68,8 +68,8 @@ function alignWithORB(refMat, targetMat) {
     let srcPts = [], dstPts = [];
 
     for (let i = 0; i < Math.min(goodMatches.length, 50); i++) {
-        let p2 = kp2.get(goodMatches[i].trainIdx).pt;
-        let p1 = kp1.get(goodMatches[i].queryIdx).pt;
+        let p2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
+        let p1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
         srcPts.push(p2.x, p2.y);
         dstPts.push(p1.x, p1.y);
     }
@@ -80,17 +80,17 @@ function alignWithORB(refMat, targetMat) {
     let aligned = new cv.Mat();
 
     cv.warpPerspective(targetMat, aligned, h, new cv.Size(refMat.cols, refMat.rows));
-    [orb, kp1, kp2, des1, des2, bf, matches, srcMat, dstMat, h].forEach(obj => { if (obj && obj.delete) obj.delete(); });
+    [orb, keyPoint_1, keyPoint_2, des1, des2, bf, matches, srcMat, dstMat, h].forEach(obj => { if (obj && obj.delete) obj.delete(); });
     return aligned;
 }
 
 // Notes 7: AKAZE is another feature detection and matching algorithm that is designed to be faster and more efficient than ORB, especially for larger images.
 function alignWithAKAZE(refMat, targetMat) {
     let akaze = cv.AKAZE.create();
-    let kp1 = new cv.KeyPointVector(), kp2 = new cv.KeyPointVector();
+    let keyPoint_1 = new cv.KeyPointVector(), keyPoint_2 = new cv.KeyPointVector();
     let des1 = new cv.Mat(), des2 = new cv.Mat();
-    akaze.detectAndCompute(refMat, new cv.Mat(), kp1, des1);
-    akaze.detectAndCompute(targetMat, new cv.Mat(), kp2, des2);
+    akaze.detectAndCompute(refMat, new cv.Mat(), keyPoint_1, des1);
+    akaze.detectAndCompute(targetMat, new cv.Mat(), keyPoint_2, des2);
     let bf = new cv.BFMatcher(cv.NORM_HAMMING, true);
     let matches = new cv.DMatchVector();
     bf.match(des1, des2, matches);
@@ -104,8 +104,8 @@ function alignWithAKAZE(refMat, targetMat) {
     let srcPts = [], dstPts = [];
 
     for (let i = 0; i < Math.min(goodMatches.length, 40); i++) {
-        let p2 = kp2.get(goodMatches[i].trainIdx).pt;
-        let p1 = kp1.get(goodMatches[i].queryIdx).pt;
+        let p2 = keyPoint_2.get(goodMatches[i].trainIdx).pt;
+        let p1 = keyPoint_1.get(goodMatches[i].queryIdx).pt;
         srcPts.push(p2.x, p2.y);
         dstPts.push(p1.x, p1.y);
     }
@@ -116,7 +116,7 @@ function alignWithAKAZE(refMat, targetMat) {
     let aligned = new cv.Mat();
     cv.warpPerspective(targetMat, aligned, h, new cv.Size(refMat.cols, refMat.rows));
 
-    [akaze, kp1, kp2, des1, des2, bf, matches, srcMat, dstMat, h].forEach(obj => { if (obj && obj.delete) obj.delete(); });
+    [akaze, keyPoint_1, keyPoint_2, des1, des2, bf, matches, srcMat, dstMat, h].forEach(obj => { if (obj && obj.delete) obj.delete(); });
     return aligned;
 }
 
