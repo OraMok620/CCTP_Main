@@ -1,3 +1,8 @@
+//Plan A for CCTP (B discussed with supervisor, A my original plan)
+//If no idea, keep on trying and learning, give up B.
+
+//2month learnt for OpenCV.js and it's results.
+
 //Notes 1: General concept ---> document.getElementById is used to access HTML elements by their ID.
 const video = document.getElementById('video');
 const captureBtn = document.getElementById('capture');
@@ -14,8 +19,11 @@ let capturedMats = [];
 const MAX_WIDTH = 1024;
 
 //Notes 3: window.onload is an event that triggers when the entire page has finished loading.
+//Most important for this web app, as the app supported by OpenCV.js, 
+//which is a JavaScript port of the OpenCV library, needs to ensure that OpenCV is fully loaded and ready before initializing the app.
 window.onload = () => {
     // Check if OpenCV is loaded and ready. If not, keep checking every 500milliseconds until it is. 
+    //https://docs.opencv.org/3.4/de/d06/tutorial_js_basic_ops.html
     let checkCV = setInterval(() => {
         if (typeof cv !== 'undefined' && cv.Mat) {
             clearInterval(checkCV);
@@ -177,14 +185,16 @@ function searchForBestAlignment(refMat, targetMat) {
         try {
             return strategy();
         } catch (e) {
+            //check the console for any errors that occur during the alignment process.
             console.warn("Alignment strategy failed:");
             console.error(e);
         }
     }
 }
 
-// Notes 10: fastAlphaBlend performs a weighted blending of two images based on a mask, where the mask determines the contribution of each image to the final result.
-function fastAlphaBlend(img1, img2, mask) {
+// Notes 10: This function performs a weighted blending of two images based on a mask, where the mask determines the contribution of each image to the final result.
+function smoothBlending(img1, img2, mask) {
+    //m stand for mask, f1 and f2 are the floating-point versions of the input images, channels1 and channels2 are the individual color channels of the images.
     let m = new cv.Mat();
     mask.convertTo(m, cv.CV_32F, 1/255);
     let f1 = new cv.Mat(), f2 = new cv.Mat();
@@ -201,53 +211,59 @@ function fastAlphaBlend(img1, img2, mask) {
         [t1, t2, invM].forEach(x => x.delete());
     }
     let result = new cv.Mat();
+    //cv.merge combines the individual color channels back into a single image, which is then converted back to an 8-bit unsigned integer format suitable for display.
+    //This is the important step where the blended image is created by merging the modified channels of the second image, which now contains the blended result of both images based on the mask.
     cv.merge(channels2, result);
     result.convertTo(result, cv.CV_8U);
     [m, f1, f2, channels1, channels2].forEach(x => { if(x.delete) x.delete(); });
     return result;
 }
 
-// Notes 11: processStacking is the main function that handles the image alignment and blending process. 
-// It updates the status messages, performs the alignment using the robustAlignment function, optimizes the quality by creating a mask based on Laplacian edge detection, and then blends the images using fastAlphaBlend. 
-// Finally, it displays the result and sets up the download button.
+//Notes 11: processStacking is the main function that handles the image alignment and blending process. 
+//It updates the status messages, performs the alignment using the robustAlignment function, optimizes the quality by creating a mask based on Laplacian edge detection, and then blends the images using smoothBlending. 
+//Finally, it displays the result and sets up the download button.
 function processStacking() {
     try {
         status.innerText = "Aligning images...";
+        //img1 is the first captured image, which serves as the reference for alignment. 
+        //img2Raw is the second captured image, which will be aligned to img1 using the robustAlignment function.
+        //img2 is the result of the alignment process, which should be closely aligned with img1, allowing for better blending in the subsequent steps.
         const img1 = capturedMats[0];
         const img2Raw = capturedMats[1];
         const img2 = robustAlignment(img1, img2Raw);
-
-        status.innerText = "Optimizing quality...";
+        status.innerText = "Improving quality...";
+        //gray1 and gray2 are the grayscale versions of the aligned images, which are used for edge detection.
         let gray1 = new cv.Mat(), gray2 = new cv.Mat();
         cv.cvtColor(img1, gray1, cv.COLOR_RGBA2GRAY);
         cv.cvtColor(img2, gray2, cv.COLOR_RGBA2GRAY);
-
+        //lap1 and lap2 are the results of applying the Laplacian operator to the grayscale images, which highlights the edges and details in the images.
         let lap1 = new cv.Mat(), lap2 = new cv.Mat();
         cv.Laplacian(gray1, lap1, cv.CV_64F);
         cv.Laplacian(gray2, lap2, cv.CV_64F);
-
+        //abs1 and abs2 are the absolute values of the Laplacian results, which are used to create a mask that identifies areas of significant difference between the two images.
         let abs1 = new cv.Mat(), abs2 = new cv.Mat();
         cv.convertScaleAbs(lap1, abs1);
         cv.convertScaleAbs(lap2, abs2);
-
+        //mask is created by subtracting the absolute Laplacian images and applying a binary threshold to identify areas of significant difference, which will be used for blending.
+        //diff is the result of the subtraction, and the thresholding step creates a binary mask where areas with a difference greater than 5 are set to 255 (white) and others are set to 0 (black).
         let mask = new cv.Mat();
         let diff = new cv.Mat();
         cv.subtract(abs1, abs2, diff);
         cv.threshold(diff, mask, 5, 255, cv.THRESH_BINARY);
-        
+        //softMask is created by applying a Gaussian blur to the binary mask, which helps to create smoother transitions between the blended images during the blending process.
         let softMask = new cv.Mat();
         cv.GaussianBlur(mask, softMask, new cv.Size(15, 15), 0);
-
         let result = fastAlphaBlend(img1, img2, softMask);
-        
+        //resCanvas is the canvas element where the final blended image will be displayed. 
+        //***If it doesn't exist, it is created and appended to the previews container.
         let resCanvas = document.getElementById('resCanvas') || document.createElement('canvas');
         resCanvas.id = 'resCanvas';
         if (!document.getElementById('resCanvas')) previews.appendChild(resCanvas);
-        
+        //Finally, the blended result is displayed on the canvas, and the download button is set up to allow the user to save the resulting image.
         cv.imshow(resCanvas, result);
         setupDownload(resCanvas);
-        
         status.innerText = "Completed.";
+        //Clean up all the OpenCV Mat objects to free memory.
         [img2, gray1, gray2, lap1, lap2, abs1, abs2, mask, softMask, result].forEach(m => { if(m.delete) m.delete(); });
 
     } catch (e) {
@@ -256,25 +272,22 @@ function processStacking() {
     }
 }
 
-// Notes 12: The snap button's onclick event captures the current video frame, creates an OpenCV Mat from it, and adds it to the capturedMats array. 
-// It also updates the UI to show the captured image and changes the button text for the next capture. 
-// Once two images are captured, it disables the snap button and starts the processing. 
-// The restart button simply reloads the page to start over.
+//Notes 12: The snap button's onclick event captures the current video frame, creates an OpenCV Mat from it, and adds it to the capturedMats array. 
+//It also updates the UI to show the captured image and changes the button text for the next capture. 
+//Once two images are captured, it disables the snap button and starts the processing. 
+//The restart button simply reloads the page to start over.
 captureBtn.onclick = () => {
     const canvas = document.createElement('canvas');
     canvas.width = Math.min(video.videoWidth, MAX_WIDTH);
     canvas.height = (canvas.width / video.videoWidth) * video.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
     let mat = cv.imread(canvas);
     capturedMats.push(mat);
-
     const img = new Image();
     img.src = canvas.toDataURL('image/jpeg');
     img.className = "preview-img";
     previews.appendChild(img);
-
     if (capturedMats.length === 1) {
         captureBtn.innerText = "Take photo focus focus on background.";
     } else if (capturedMats.length === 2) {
@@ -308,7 +321,6 @@ video.onclick = async (e) => {
     const rect = video.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-
     try {
         await track.applyConstraints({
             advanced: [{ pointsOfInterest: [{x, y}] }]
