@@ -1,6 +1,5 @@
 //Plan A for CCTP (B discussed with supervisor, A my original plan)
 //If no idea, keep on trying and learning, give up B.
-
 //2month learnt for OpenCV.js and it's results.
 
 //Notes 1: General concept ---> document.getElementById is used to access HTML elements by their ID.
@@ -14,9 +13,9 @@ const hiddenCanvas = document.getElementById('hiddenCanvas');
 //setting global variables and constants for the web app. 
 //Notes 2: capturedMats is the array that stores the OpenCV Mat objects for the captured images
 //MAX_WIDTH is a constant that limits the width of the captured images to ensure better performance during processing.
-//1024 pixels is a widely adopted standard for web images, providing a strong balance between high-quality visuals and fast performance.
+//4096 pixels give a good image quality.
 let capturedMats = [];
-const MAX_WIDTH = 1024;
+const MAX_WIDTH = 4096;
 
 //Notes 3: window.onload is an event that triggers when the entire page has finished loading.
 //Most important for this web app, as the app supported by OpenCV.js, 
