@@ -59,7 +59,8 @@ async function startCamera() {
 //Notes 6: ORB is a popular feature detection and matching algorithm in computer vision. 
 //It is used to find key points and descriptors in images, which can then be used for tasks like image alignment, object recognition, and more. 
 function matchLayout(refMat, targetMat) {
-    let orb = new cv.ORB(); //cv.orb is a class in OpenCV that implements  which the ORB stand for *O*riented FAST and *R*otated *B*RIEF feature detection and description algorithm.
+    //cv.ORB.create() creates an ORB feature detector and descriptor extractor, which will be used to detect key points and compute descriptors for both the reference and target images.
+    let orb = cv.ORB.create(); //cv.orb is a class in OpenCV that implements  which the ORB stand for *O*riented FAST and *R*otated *B*RIEF feature detection and description algorithm.
     let keyPoint_1 = new cv.KeyPointVector(), keyPoint_2 = new cv.KeyPointVector(); //cv.keyPointVector is a data structure used in OpenCV to store key points detected in an image. keyPoint_1 and keyPoint_2 will hold the key points for the reference and target images respectively.
     let baseFeatures = new cv.Mat(), targetFeatures = new cv.Mat(); //cv.mat is a matrix data structure used in OpenCV to store image data, descriptors, and other information. baseFeatures and targetFeatures will hold the descriptors for the key points detected in the reference and target images respectively.
     //orb.detectAndCompute is a method that detects key points and computes their descriptors in a single step. 
@@ -222,17 +223,17 @@ function smoothBlending(img1, img2, mask) {
 }
 
 //Notes 11: processStacking is the main function that handles the image alignment and blending process. 
-//It updates the status messages, performs the alignment using the robustAlignment function, optimizes the quality by creating a mask based on Laplacian edge detection, and then blends the images using smoothBlending. 
+//It updates the status messages, performs the alignment using the searchForBestAlignment function, optimizes the quality by creating a mask based on Laplacian edge detection, and then blends the images using smoothBlending. 
 //Finally, it displays the result and sets up the download button.
 function processStacking() {
     try {
         status.innerText = "Aligning images...";
         //img1 is the first captured image, which serves as the reference for alignment. 
-        //img2Raw is the second captured image, which will be aligned to img1 using the robustAlignment function.
+        //img2Raw is the second captured image, which will be aligned to img1 using the searchForBestAlignment function.
         //img2 is the result of the alignment process, which should be closely aligned with img1, allowing for better blending in the subsequent steps.
         const img1 = capturedMats[0];
         const img2Raw = capturedMats[1];
-        const img2 = robustAlignment(img1, img2Raw);
+        const img2 = searchForBestAlignment(img1, img2Raw);
         status.innerText = "Improving quality...";
         //gray1 and gray2 are the grayscale versions of the aligned images, which are used for edge detection.
         let gray1 = new cv.Mat(), gray2 = new cv.Mat();
@@ -255,7 +256,7 @@ function processStacking() {
         //softMask is created by applying a Gaussian blur to the binary mask, which helps to create smoother transitions between the blended images during the blending process.
         let softMask = new cv.Mat();
         cv.GaussianBlur(mask, softMask, new cv.Size(15, 15), 0);
-        let result = fastAlphaBlend(img1, img2, softMask);
+        let result = smoothBlending(img1, img2, softMask);
         //resCanvas is the canvas element where the final blended image will be displayed. 
         //***If it doesn't exist, it is created and appended to the previews container.
         let resCanvas = document.getElementById('resCanvas') || document.createElement('canvas');
