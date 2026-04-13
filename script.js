@@ -42,6 +42,8 @@ function openCVisReady() {
 
 // Notes 5: startCamera uses the MediaDevices API to access the user's camera, requesting the environment-facing camera for better quality.
 // New learning : async allows a program to start a potentially long-running operation and still be able to respond to other events while waiting for the operation to complete.
+//https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
+//The above is the official documentation for the getUserMedia method, which is used to access the user's camera and microphone.
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
