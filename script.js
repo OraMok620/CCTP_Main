@@ -60,7 +60,8 @@ async function startCamera() {
 //It is used to find key points and descriptors in images, which can then be used for tasks like image alignment, object recognition, and more. 
 function matchLayout(refMat, targetMat) {
     //cv.ORB.create() creates an ORB feature detector and descriptor extractor, which will be used to detect key points and compute descriptors for both the reference and target images.
-    let orb = cv.ORB.create(); //cv.orb is a class in OpenCV that implements  which the ORB stand for *O*riented FAST and *R*otated *B*RIEF feature detection and description algorithm.
+    //cv.orb is a class in OpenCV that implements  which the ORB stand for *O*riented FAST and *R*otated *B*RIEF feature detection and description algorithm.
+    let orb = cv.ORB.create(); 
     let keyPoint_1 = new cv.KeyPointVector(), keyPoint_2 = new cv.KeyPointVector(); //cv.keyPointVector is a data structure used in OpenCV to store key points detected in an image. keyPoint_1 and keyPoint_2 will hold the key points for the reference and target images respectively.
     let baseFeatures = new cv.Mat(), targetFeatures = new cv.Mat(); //cv.mat is a matrix data structure used in OpenCV to store image data, descriptors, and other information. baseFeatures and targetFeatures will hold the descriptors for the key points detected in the reference and target images respectively.
     //orb.detectAndCompute is a method that detects key points and computes their descriptors in a single step. 
