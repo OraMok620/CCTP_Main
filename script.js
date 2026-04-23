@@ -308,7 +308,7 @@ function setupDownload(canvas) {
     downloadBtn.onclick = () => {
         const link = document.createElement('a');
         link.download = 'stacked-photo.jpg';
-        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.href = canvas.toDataURL('image/jpeg', 0.95); 
         link.click();
     };
 }
@@ -320,7 +320,7 @@ restartBtn.onclick = () => { location.reload(); };
 // It calculates the relative x and y coordinates of the click within the video element and applies constraints to the video track to set the focus point accordingly. 
 // If successful, it updates the status message to indicate that focus is locked.   
 video.onclick = async (e) => {
-    const track = video.srcObject.getVideoTracks()[0];
+    const track = video.srcObject.getVideoTracks()[0]; 
     const rect = video.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
